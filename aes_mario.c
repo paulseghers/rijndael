@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "aessbox.h"
+
 #define BYTE_COUNT 16
+
 
 void dumpState(unsigned char state[]) {
     printf("state:= \n");
@@ -71,6 +73,11 @@ void mixColumns(unsigned char* s){
     }
 }
 
+void addRoundKey(unsigned char* s, unsigned char* key){
+    for (int i =  0; i<BYTE_COUNT; i++){
+        s[i] ^= key[i];
+    }
+}
 
 int main(int argc, char** argv) {
     unsigned char aes_state[BYTE_COUNT] = "12345678asdfghjk";
