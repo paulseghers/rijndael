@@ -22,6 +22,5 @@ void keyschedule128(AES* aes);
 void SubBytes(word* m);
 void ShiftRows(word* m);
 void MixColumns(word* m);
-unsigned char** genLambdaset();
 
 #endif
