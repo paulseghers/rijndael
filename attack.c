@@ -22,8 +22,11 @@ unsigned char SI[] = {
     0x17, 0x2B, 0x04, 0x7E, 0xBA, 0x77, 0xD6, 0x26, 0xE1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0C, 0x7D };
 
 // Generates an array of 256 blocks, where the first byte equals 00-ff,
-// others stay 00
+// others stay set to inactiveValue
 block* generateDelta(unsigned int inactiveValue) {
+    word key[4] = {0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f};
+    AES* aes = create_aes_instance(key);
+
     block* ret = calloc(256, sizeof(block));
     for (int i = 0; i < 256; i++) {
         ret[i][0] = i << 24;
@@ -45,55 +48,49 @@ block* generateDelta(unsigned int inactiveValue) {
         ret[i][3] |= inactiveValue << 16;
         ret[i][3] |= inactiveValue << 8;
         ret[i][3] |= inactiveValue;
+        encrypt(aes, ret[i]);
     }
+
+    delete_aes_instance(aes);
     return ret;
 }
 
 // Reverses AddRoundKey and SubBytes in a chosen byte position
-unsigned int* reverseLastRound(block* toRevert, unsigned int lastKey, unsigned int position) {
-    word* ret = calloc(256, sizeof(int));
+unsigned int* reverseLastRound(block* deltaSet, unsigned int keyByte, unsigned int position) {
+    unsigned int* ret = calloc(256, sizeof(unsigned int));
     for (int i = 0; i < 256; i++) {
         // Revert AddRoundKey & SubBytes
-        unsigned int byteToRevert =
-            toRevert[i][position / 4] >> ((position % 4) * 8);
-        ret[i] = SI[byteToRevert ^ lastKey];
+        unsigned int byteToRevert = deltaSet[i][position / 4];
+        byteToRevert &= 0xff000000 >> ((position % 4) * 8);
+        byteToRevert >>= (24 - ((position % 4)) * 8);
+        ret[i] = SI[byteToRevert ^ keyByte];
     }
-
     return ret;
 }
 
 // Return true if the array of words keeps the active set property
-unsigned int isGuessValid(block deltaSet, unsigned int position, unsigned int keyByte) {
-    unsigned int checkSum = keyByte;
-    for (int i = 0; i < 256; i++) {
-        unsigned int byteToCheck =
-            deltaSet[i][position / 4] >> ((position % 4) * 8);
-        checkSum ^= byteToCheck;
+unsigned int isGuessValid(unsigned int* deltaSet, unsigned int keyByte, unsigned int position) {
+    unsigned int checkSum = 0;// keyByte;
+    for (int i = 0; i < 256; i++){
+        checkSum ^= deltaSet[i];
+        //printf("%d\n", i);
     }
+
     return checkSum == 0;
 }
 
-word guessPosition(block* toGuess, unsigned int position) {
+void crackLastKey() {
     // Solution
-    word correctGuesses[100];
-    unsigned int correctCount;
+    block* delta = generateDelta(1);
+    unsigned int* ret;
 
-    for (int i = 0; i < 256; i++) {
-        block* delta = generateDelta(i);
-
-        correctCount = 0;
-        word* ret;
-
-        for (int j = 0; j < 256; j++) {
-            ret = reverseLastRound(toGuess, j >> ((position % 4) * 8), position);
-            if (isGuessValid(ret) == 1)
-                correctGuesses[correctCount++] = j;
-        }
-
-        if (correctCount == 1) {
-            break;
+    for (int j = 0; j < 16; j++) {
+        printf("%d\n", j);
+        for (int i = 0; i < 256; i++) {
+            ret = reverseLastRound(delta, i, j);
+            if (isGuessValid(ret, i, j))
+                printf("\t%x\n", i);
+            free(ret);
         }
     }
-
-    return correctGuesses[0];
 }
