@@ -9,6 +9,8 @@ typedef uint32_t word;  // A word is an unsigned of 32-bit size.
 typedef word block[4];  // A block is an array of 4 words.
 
 block* generateDelta();
-void reverseLastRound(block* toRevert, block lastKey, int bytePosition);
+unsigned int* reverseLastRound(block* toRevert, unsigned int lastKey, unsigned int position);
+unsigned int isGuessValid(word* toCheck);
+word guessPosition(block* toGuess, unsigned int position);
 
 #endif
