@@ -10,6 +10,6 @@ LAST ROUND KEY = 47f7f7bc95353e03f96c32bcfd058dfd
 #include <stdlib.h>
 
 int main() {
-    crackLastKey();
+    checkGuess();
     return 0;
 }

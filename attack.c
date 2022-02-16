@@ -1,7 +1,7 @@
 #include "attack.h"
 #include "aes.h"
 #include <stdlib.h>
-
+#include <stdbool.h>
 // AES Inverse S-Box
 unsigned char SI[] = {
     0x52, 0x09, 0x6A, 0xD5, 0x30, 0x36, 0xA5, 0x38, 0xBF, 0x40, 0xA3, 0x9E, 0x81, 0xF3, 0xD7, 0xFB,
@@ -93,4 +93,54 @@ void crackLastKey() {
             free(ret);
         }
     }
+}
+
+bool allset(bool* B_a, int size){
+    bool b = true;
+    for (size_t i =0; i<size; i++){
+        b &= B_a[i];
+    }
+    return b;
+}
+
+
+void checkGuess(){
+    int* guessarray = malloc(16*sizeof(int)); //block* indexguess = malloc(256*sizeof(block));
+    bool setpos[16] = { false };
+    unsigned int* ret;
+    int o = 1; //offset for generating new Lambda sets
+    while (!allset(setpos, 16)){
+        block* delta = generateDelta(o);
+        for (int j = 0; j < 16; j++){
+            int keepindex = 0;
+            int ncandidates = 0;
+            printf("%d\n", j);
+
+            for (int i = 0; i < 256; i++) {
+                ret = reverseLastRound(delta, i, j);
+                if (isGuessValid(ret, i, j)){
+                    ncandidates++;
+                    keepindex = i;
+                    printf("\t%x\n", i);
+                    //printf("reeee");
+                }
+                free(ret);
+            }
+            //printf("n candidates: \t %d", ncandidates);
+            if(ncandidates == 1){
+                guessarray[j] = keepindex; //if ncandidates was incremented exactly once, keepindex was set exactly once
+                setpos[j] = true;
+            }
+        o++;
+     }
+     free(delta);
+    }
+    printf("key array:\n[");
+    for (size_t i=0; i<16; i++){
+        printf("%x ", guessarray[i]);
+    }
+    printf("]\n");
+    
+    free(guessarray);
+    //free(guessarray);
 }
