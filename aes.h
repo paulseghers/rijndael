@@ -20,7 +20,6 @@ void delete_aes_instance(AES* aes);
 void encrypt(AES* aes, word* m);
 void keyschedule128(AES* aes);
 void SubBytes(word* m);
-void InvSubBytes(word* m);
 void ShiftRows(word* m);
 void MixColumns(word* m);
 
