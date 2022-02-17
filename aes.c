@@ -190,7 +190,7 @@ unsigned int* invkeyschadule128(unsigned int* lastKey) {
     unsigned int* currentKey = malloc(4*sizeof(int));
     memcpy(currentKey, lastKey, sizeof(int) * 4);
     int tword;
-    for (int round = 0; round < 4; round++) {
+    for (int round = 3; round >= 0; round--) {
         currentKey[3] ^= currentKey[2];
 
         tword = S[(currentKey[3] >> 16) & 0xFF];
@@ -205,6 +205,7 @@ unsigned int* invkeyschadule128(unsigned int* lastKey) {
         currentKey[2] ^= currentKey[1];
         currentKey[1] ^= currentKey[0];
         currentKey[0] ^= tword;
+        dumpMessage("CURR: ", currentKey);
     }
     return currentKey;
 }
