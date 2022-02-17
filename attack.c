@@ -79,22 +79,6 @@ unsigned int isGuessValid(unsigned int* deltaSet, unsigned int keyByte, unsigned
     return checkSum == 0;
 }
 
-void crackLastKey() {
-    // Solution
-    block* delta = generateDelta(1);
-    unsigned int* ret;
-
-    for (int j = 0; j < 16; j++) {
-        printf("%d\n", j);
-        for (int i = 0; i < 256; i++) {
-            ret = reverseLastRound(delta, i, j);
-            if (isGuessValid(ret, i, j))
-                printf("\t%x\n", i);
-            free(ret);
-        }
-    }
-}
-
 bool allset(bool* B_a, int size){
     bool b = true;
     for (size_t i =0; i<size; i++){
@@ -104,8 +88,8 @@ bool allset(bool* B_a, int size){
 }
 
 
-void checkGuess(){
-    int* guessarray = malloc(16*sizeof(int)); //block* indexguess = malloc(256*sizeof(block));
+unsigned int* checkGuess(){
+    unsigned int* guessarray = malloc(16*sizeof(int));
     bool setpos[16] = { false };
     unsigned int* ret;
     int o = 1; //offset for generating new Lambda sets
@@ -114,33 +98,27 @@ void checkGuess(){
         for (int j = 0; j < 16; j++){
             int keepindex = 0;
             int ncandidates = 0;
-            printf("%d\n", j);
 
             for (int i = 0; i < 256; i++) {
                 ret = reverseLastRound(delta, i, j);
                 if (isGuessValid(ret, i, j)){
                     ncandidates++;
                     keepindex = i;
-                    printf("\t%x\n", i);
-                    //printf("reeee");
                 }
                 free(ret);
             }
-            //printf("n candidates: \t %d", ncandidates);
             if(ncandidates == 1){
                 guessarray[j] = keepindex; //if ncandidates was incremented exactly once, keepindex was set exactly once
                 setpos[j] = true;
             }
-        o++;
-     }
-     free(delta);
+            o++;
+        }
+        free(delta);
     }
-    printf("key array:\n[");
-    for (size_t i=0; i<16; i++){
-        printf("%x ", guessarray[i]);
-    }
-    printf("]\n");
-    
-    free(guessarray);
-    //free(guessarray);
+    guessarray[0] = (guessarray[0] << 24) | (guessarray[1] << 16) | (guessarray[2] << 8) | guessarray[3];
+    guessarray[1] = (guessarray[4] << 24) | (guessarray[5] << 16) | (guessarray[6] << 8) | guessarray[7];
+    guessarray[2] = (guessarray[8] << 24) | (guessarray[9] << 16) | (guessarray[10] << 8) | guessarray[11];
+    guessarray[3] = (guessarray[12] << 24) | (guessarray[13] << 16) | (guessarray[14] << 8) | guessarray[15];
+
+    return guessarray;
 }

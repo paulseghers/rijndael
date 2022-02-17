@@ -19,6 +19,7 @@ AES* create_aes_instance(word* key);
 void delete_aes_instance(AES* aes);
 void encrypt(AES* aes, word* m);
 void keyschedule128(AES* aes);
+unsigned int* invkeyschadule128(unsigned int* lastKey);
 void SubBytes(word* m);
 void ShiftRows(word* m);
 void MixColumns(word* m);

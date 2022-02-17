@@ -115,7 +115,6 @@ void keyschedule128(AES* aes) {
 
         memcpy(aes->round_keys[round], round_key, sizeof(block));
     }
-
     return;
 }
 
@@ -185,4 +184,27 @@ void MixColumns(word* m) {
         }
     }
     memcpy(m, t, sizeof(block));
+}
+
+unsigned int* invkeyschadule128(unsigned int* lastKey) {
+    unsigned int* currentKey = malloc(4*sizeof(int));
+    memcpy(currentKey, lastKey, sizeof(int) * 4);
+    int tword;
+    for (int round = 0; round < 4; round++) {
+        currentKey[3] ^= currentKey[2];
+
+        tword = S[(currentKey[3] >> 16) & 0xFF];
+        tword <<= 8;
+        tword ^= S[(currentKey[3] >> 8) & 0xFF];
+        tword <<= 8;
+        tword ^= S[currentKey[3] & 0xFF];
+        tword <<= 8;
+        tword ^= S[(currentKey[3] >> 24) & 0xFF];
+        tword ^= R[round + 1] << 24;
+
+        currentKey[2] ^= currentKey[1];
+        currentKey[1] ^= currentKey[0];
+        currentKey[0] ^= tword;
+    }
+    return currentKey;
 }
