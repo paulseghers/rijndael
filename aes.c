@@ -1,8 +1,4 @@
 #include "aes.h"
-#include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 #define KEYSIZE 4
 
@@ -79,7 +75,7 @@ void encrypt(AES* aes, word* m) {
         m[w] ^= aes->round_keys[0][w];
 
     // Rounds
-    for (int i = 1; i <= aes->rounds; i++) {
+    for (unsigned int i = 1; i <= aes->rounds; i++) {
         SubBytes(m);
         ShiftRows(m);
         // Skip MixColumns on the last round
@@ -186,7 +182,7 @@ void MixColumns(word* m) {
     memcpy(m, t, sizeof(block));
 }
 
-unsigned int* invkeyschadule128(unsigned int* lastKey) {
+unsigned int* invkeyschedule128(unsigned int* lastKey) {
     unsigned int* currentKey = malloc(4*sizeof(int));
     memcpy(currentKey, lastKey, sizeof(int) * 4);
     int tword;
@@ -205,7 +201,6 @@ unsigned int* invkeyschadule128(unsigned int* lastKey) {
         currentKey[2] ^= currentKey[1];
         currentKey[1] ^= currentKey[0];
         currentKey[0] ^= tword;
-        dumpMessage("CURR: ", currentKey);
     }
     return currentKey;
 }

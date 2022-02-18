@@ -1,7 +1,6 @@
 #include "attack.h"
 #include "aes.h"
-#include <stdlib.h>
-#include <stdbool.h>
+
 // AES Inverse S-Box
 unsigned char SI[] = {
     0x52, 0x09, 0x6A, 0xD5, 0x30, 0x36, 0xA5, 0x38, 0xBF, 0x40, 0xA3, 0x9E, 0x81, 0xF3, 0xD7, 0xFB,
@@ -21,33 +20,16 @@ unsigned char SI[] = {
     0xA0, 0xE0, 0x3B, 0x4D, 0xAE, 0x2A, 0xF5, 0xB0, 0xC8, 0xEB, 0xBB, 0x3C, 0x83, 0x53, 0x99, 0x61,
     0x17, 0x2B, 0x04, 0x7E, 0xBA, 0x77, 0xD6, 0x26, 0xE1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0C, 0x7D };
 
-// Generates an array of 256 blocks, where the first byte equals 00-ff,
-// others stay set to inactiveValue
-block* generateDelta(unsigned int inactiveValue) {
+block* generateLambda(unsigned int val) {
     word key[4] = {0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f};
     AES* aes = create_aes_instance(key);
 
-    block* ret = calloc(256, sizeof(block));
-    for (int i = 0; i < 256; i++) {
-        ret[i][0] = i << 24;
-        ret[i][0] |= inactiveValue << 16;
-        ret[i][0] |= inactiveValue << 8;
-        ret[i][0] |= inactiveValue;
-
-        ret[i][1] |= inactiveValue << 24;
-        ret[i][1] |= inactiveValue << 16;
-        ret[i][1] |= inactiveValue << 8;
-        ret[i][1] |= inactiveValue;
-
-        ret[i][2] |= inactiveValue << 24;
-        ret[i][2] |= inactiveValue << 16;
-        ret[i][2] |= inactiveValue << 8;
-        ret[i][2] |= inactiveValue;
-
-        ret[i][3] |= inactiveValue << 24;
-        ret[i][3] |= inactiveValue << 16;
-        ret[i][3] |= inactiveValue << 8;
-        ret[i][3] |= inactiveValue;
+    block* ret = calloc(LAMBDA_SIZE, sizeof(block));
+    for (int i = 0; i < LAMBDA_SIZE; i++) {
+        ret[i][0] = (i << 24) | (val << 16) | (val << 8) | val;
+        ret[i][1] = (val << 24) | (val << 16) | (val << 8) | val;
+        ret[i][2] = (val << 24) | (val << 16) | (val << 8) | val;
+        ret[i][3] = (val << 24) | (val << 16) | (val << 8) | val;
         encrypt(aes, ret[i]);
     }
 
@@ -55,12 +37,15 @@ block* generateDelta(unsigned int inactiveValue) {
     return ret;
 }
 
-// Reverses AddRoundKey and SubBytes in a chosen byte position
-unsigned int* reverseLastRound(block* deltaSet, unsigned int keyByte, unsigned int position) {
-    unsigned int* ret = calloc(256, sizeof(unsigned int));
-    for (int i = 0; i < 256; i++) {
+unsigned int* reverseLastRound(
+    block* lambdaSet,
+    unsigned int keyByte,
+    unsigned int position
+) {
+    unsigned int* ret = calloc(LAMBDA_SIZE, sizeof(unsigned int));
+    for (int i = 0; i < LAMBDA_SIZE; i++) {
         // Revert AddRoundKey & SubBytes
-        unsigned int byteToRevert = deltaSet[i][position / 4];
+        unsigned int byteToRevert = lambdaSet[i][position / 4];
         byteToRevert &= 0xff000000 >> ((position % 4) * 8);
         byteToRevert >>= (24 - ((position % 4)) * 8);
         ret[i] = SI[byteToRevert ^ keyByte];
@@ -68,57 +53,55 @@ unsigned int* reverseLastRound(block* deltaSet, unsigned int keyByte, unsigned i
     return ret;
 }
 
-// Return true if the array of words keeps the active set property
-unsigned int isGuessValid(unsigned int* deltaSet, unsigned int keyByte, unsigned int position) {
-    unsigned int checkSum = 0;// keyByte;
-    for (int i = 0; i < 256; i++){
-        checkSum ^= deltaSet[i];
-        //printf("%d\n", i);
+unsigned int isGuessValid(unsigned int* lambdaSet) {
+    unsigned int checkSum = 0;
+    for (int i = 0; i < LAMBDA_SIZE; i++){
+        checkSum ^= lambdaSet[i];
     }
 
     return checkSum == 0;
 }
 
-bool allset(bool* B_a, int size){
+bool allset(bool* B_a, unsigned int size) {
     bool b = true;
-    for (size_t i =0; i<size; i++){
+    for (unsigned int i = 0; i < size; i++){
         b &= B_a[i];
     }
     return b;
 }
 
-
-unsigned int* checkGuess(){
-    unsigned int* guessarray = malloc(16*sizeof(int));
-    bool setpos[16] = { false };
+unsigned int* guess(){
+    unsigned int* g = malloc(BLOCK_SIZE * sizeof(int)); // Guess array
+    bool setpos[BLOCK_SIZE] = { false };
     unsigned int* ret;
-    int o = 1; //offset for generating new Lambda sets
-    while (!allset(setpos, 16)){
-        block* delta = generateDelta(o);
-        for (int j = 0; j < 16; j++){
-            int keepindex = 0;
-            int ncandidates = 0;
+    int o = 0; // Offset for generating new Lambda sets
+    while (!allset(setpos, BLOCK_SIZE)){
+        block* lambda = generateLambda(o++);
+        for (unsigned int position = 0; position < BLOCK_SIZE; position++){
+            unsigned int keepindex, ncandidates = 0;
 
-            for (int i = 0; i < 256; i++) {
-                ret = reverseLastRound(delta, i, j);
-                if (isGuessValid(ret, i, j)){
+            for (unsigned int keyByte = 0; keyByte < LAMBDA_SIZE; keyByte++) {
+                ret = reverseLastRound(lambda,keyByte,position);
+                if (isGuessValid(ret)) {
                     ncandidates++;
-                    keepindex = i;
+                    keepindex = keyByte;
                 }
                 free(ret);
             }
-            if(ncandidates == 1){
-                guessarray[j] = keepindex; //if ncandidates was incremented exactly once, keepindex was set exactly once
-                setpos[j] = true;
-            }
-            o++;
-        }
-        free(delta);
-    }
-    guessarray[0] = (guessarray[0] << 24) | (guessarray[1] << 16) | (guessarray[2] << 8) | guessarray[3];
-    guessarray[1] = (guessarray[4] << 24) | (guessarray[5] << 16) | (guessarray[6] << 8) | guessarray[7];
-    guessarray[2] = (guessarray[8] << 24) | (guessarray[9] << 16) | (guessarray[10] << 8) | guessarray[11];
-    guessarray[3] = (guessarray[12] << 24) | (guessarray[13] << 16) | (guessarray[14] << 8) | guessarray[15];
 
-    return guessarray;
+            // If ncandidates was incremented exactly once
+            // keepindex was set exactly once
+            if(ncandidates == 1) {
+                g[position] = keepindex;
+                setpos[position] = true;
+            }
+        }
+        free(lambda);
+    }
+    g[0] = (g[0] << 24) | (g[1] << 16) | (g[2] << 8) | g[3];
+    g[1] = (g[4] << 24) | (g[5] << 16) | (g[6] << 8) | g[7];
+    g[2] = (g[8] << 24) | (g[9] << 16) | (g[10] << 8) | g[11];
+    g[3] = (g[12] << 24) | (g[13] << 16) | (g[14] << 8) | g[15];
+
+    return g;
 }

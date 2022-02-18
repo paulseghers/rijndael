@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Werror
+CFLAGS = -Wall -Werror -Wextra
 LDFLAGS =
 OBJFILES = aes.o attack.o usage.o
 TARGET = aestest
