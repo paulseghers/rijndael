@@ -1,3 +1,4 @@
+#pragma once
 #ifndef AES_H_
 #define AES_H_
 
